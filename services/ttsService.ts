@@ -31,17 +31,23 @@ async function decodeAudioData(
 }
 
 export async function speakText(text: string): Promise<void> {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
+  // Use VITE_ env var for client-side access
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+  const ai = new GoogleGenAI({ apiKey });
+
+  const voices = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Aoede'];
+  const randomVoice = voices[Math.floor(Math.random() * voices.length)];
+  console.log(`Speaking with voice: ${randomVoice}`);
+
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
+      model: "gemini-2.0-flash-exp",
       contents: [{ parts: [{ text: `Say clearly and naturally: ${text}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Kore' }, // Clear, professional voice
+            prebuiltVoiceConfig: { voiceName: randomVoice },
           },
         },
       },
