@@ -1,0 +1,7 @@
+{
+  "name": "Brazil & Anglosphere Dashboard",
+  "description": "A high-visibility dashboard for date, time, and weather, themed with cultural milestones and historical weather from Brazil and English-speaking countries.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
