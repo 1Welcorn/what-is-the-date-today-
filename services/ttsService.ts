@@ -72,6 +72,12 @@ export async function speakText(text: string): Promise<void> {
     console.error("TTS Error:", error);
     // Fallback to browser's native TTS if Gemini fails
     const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    const voices = window.speechSynthesis.getVoices();
+    const englishVoice = voices.find(v => v.lang.includes('en-US')) || voices.find(v => v.lang.includes('en'));
+    if (englishVoice) {
+      utterance.voice = englishVoice;
+    }
     window.speechSynthesis.speak(utterance);
   }
 }
