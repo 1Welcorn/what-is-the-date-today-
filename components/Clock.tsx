@@ -9,17 +9,17 @@ const Clock: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const timeString = time.toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    hour12: false 
+  const timeString = time.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
   });
-  
-  const dateString = time.toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    month: 'long', 
-    day: 'numeric', 
-    year: 'numeric' 
+
+  const dateString = time.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
   });
 
   const dayOfWeek = dateString.split(',')[0];
@@ -28,21 +28,21 @@ const Clock: React.FC = () => {
   return (
     <div className="text-white text-center drop-shadow-[0_30px_30px_rgba(0,0,0,0.8)] flex flex-col items-center select-none w-full px-4">
       {/* Secondary: Time */}
-      <div className="flex items-center gap-8 opacity-70 mb-8 lg:mb-12 fade-in">
-        <div className="h-[3px] w-20 lg:w-40 bg-gradient-to-r from-transparent to-white/50"></div>
-        <span className="text-6xl md:text-8xl lg:text-9xl font-light tracking-[0.3em] font-sans">
+      <div className="flex items-center gap-4 lg:gap-8 opacity-70 mb-4 lg:mb-8 fade-in">
+        <div className="h-[2px] w-12 lg:w-32 bg-gradient-to-r from-transparent to-white/50"></div>
+        <span className="text-4xl md:text-6xl lg:text-7xl font-light tracking-[0.2em] font-sans">
           {timeString}
         </span>
-        <div className="h-[3px] w-20 lg:w-40 bg-gradient-to-l from-transparent to-white/50"></div>
+        <div className="h-[2px] w-12 lg:w-32 bg-gradient-to-l from-transparent to-white/50"></div>
       </div>
 
       {/* Primary: Date (Massive for TV) */}
       <div className="flex flex-col items-center w-full">
-        <h1 className="text-[14.4vw] lg:text-[17.6vw] font-black tracking-tighter leading-[0.8] font-serif uppercase bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70">
+        <h1 className="text-[12vw] lg:text-[14vw] font-black tracking-tighter leading-[0.9] font-serif uppercase bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70">
           {dayOfWeek}
         </h1>
-        <span className="block text-[6vw] lg:text-[7vw] font-bold tracking-tight mt-[-2vw] opacity-90 lowercase font-sans border-t-8 border-white/10 pt-4 px-20">
-           {restOfDate}
+        <span className="block text-[4vw] lg:text-[5vw] font-bold tracking-tight mt-2 opacity-90 font-sans border-t-4 border-white/10 pt-4 px-12">
+          {restOfDate}
         </span>
       </div>
     </div>
