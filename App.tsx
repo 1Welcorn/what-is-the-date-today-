@@ -208,17 +208,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex gap-4 animate-slide-down stagger-1">
-            <button
-              onClick={handleEngineToggle}
-              className={`glass px-6 h-24 rounded-full flex flex-col items-center justify-center transition-all duration-300 border-2 min-w-[140px] ${aiEngine === 'openrouter' ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/20 hover:border-white/60'}`}
-              title="Switch AI Engine"
-            >
-              <span className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1">AI Engine</span>
-              <span className="text-lg font-bold text-white flex items-center gap-2">
-                <i className={`fas ${aiEngine === 'gemini' ? 'fa-google text-blue-400' : 'fa-robot text-orange-400'}`}></i>
-                {aiEngine === 'gemini' ? 'Gemini' : 'Mimo'}
-              </span>
-            </button>
+
 
             <button
               onClick={handleSpeakDate}
