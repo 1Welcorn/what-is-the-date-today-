@@ -19,7 +19,7 @@ const App: React.FC = () => {
   const initializeApp = useCallback(async (engine: 'gemini' | 'openrouter' = aiEngine) => {
     setLoading(true);
     setError(null);
-    
+
     let lat = -15.7975; // Default: Brasília
     let lon = -47.8919;
     let usingDefault = false;
@@ -73,28 +73,28 @@ const App: React.FC = () => {
     if (isSpeaking) return;
     setIsSpeaking(true);
     const today = new Date();
-    const fullDateStr = today.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric' 
+    const fullDateStr = today.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
     });
-    const timeStr = today.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      hour12: false 
+    const timeStr = today.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
     });
-    
+
     let speechText = `Today is ${fullDateStr}. The current time is ${timeStr}.`;
     if (weather) {
       speechText += ` In ${weather.locationName}, the weather is currently ${weather.conditionText} with a temperature of ${Math.round(weather.temperature)} degrees Celsius.`;
     }
-    
+
     await speakText(speechText);
     setIsSpeaking(false);
   };
 
-  const finalBgStyle = insight?.imageKeyword 
+  const finalBgStyle = insight?.imageKeyword
     ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)), url('https://loremflickr.com/1920/1080/${encodeURIComponent(insight.imageKeyword)}')`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : { background: 'linear-gradient(to bottom, #020617, #0f172a)' };
 
@@ -118,7 +118,7 @@ const App: React.FC = () => {
         <i className="fas fa-triangle-exclamation text-8xl mb-8 text-red-500"></i>
         <h1 className="text-4xl font-bold mb-4">Board Error</h1>
         <p className="text-xl opacity-80 max-w-2xl">{error}</p>
-        <button 
+        <button
           onClick={() => window.location.reload()}
           className="mt-12 px-8 py-4 glass rounded-full hover:bg-white/20 transition-all uppercase tracking-widest font-bold"
         >
@@ -143,20 +143,20 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen w-screen relative overflow-hidden flex flex-col">
-      <div 
+      <div
         className="absolute inset-0 transition-all duration-1000 animate-bg-zoom"
         style={finalBgStyle}
       ></div>
-      
+
       {insight && (
-        <div 
-          className="absolute inset-0 opacity-30 pointer-events-none fade-in" 
+        <div
+          className="absolute inset-0 opacity-30 pointer-events-none fade-in"
           style={{ backgroundColor: insight.themeColor }}
         ></div>
       )}
 
       {expandedId && insight && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] glass backdrop-blur-[40px] flex flex-col p-16 lg:p-24 fade-in cursor-pointer overflow-y-auto"
           onClick={() => setExpandedId(null)}
         >
@@ -184,7 +184,7 @@ const App: React.FC = () => {
               <i className="fas fa-times"></i>
             </button>
           </div>
-          
+
           <div className="max-w-[80vw] mx-auto">
             <h2 className="text-7xl lg:text-[6vw] font-black font-serif text-white mb-16 leading-tight border-b-8 border-white/10 pb-8">
               {expandedId === 'cultural' ? insight.event : insight.historicalWeather?.name}
@@ -206,9 +206,9 @@ const App: React.FC = () => {
           <div className="animate-slide-down stagger-1">
             {weather && <WeatherCard weather={weather} />}
           </div>
-          
+
           <div className="flex gap-4 animate-slide-down stagger-1">
-            <button 
+            <button
               onClick={handleEngineToggle}
               className={`glass px-6 h-24 rounded-full flex flex-col items-center justify-center transition-all duration-300 border-2 min-w-[140px] ${aiEngine === 'openrouter' ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/20 hover:border-white/60'}`}
               title="Switch AI Engine"
@@ -220,7 +220,7 @@ const App: React.FC = () => {
               </span>
             </button>
 
-            <button 
+            <button
               onClick={handleSpeakDate}
               className={`glass h-24 w-24 rounded-full flex items-center justify-center transition-all duration-300 border-2 ${isSpeaking ? 'border-indigo-500 bg-indigo-500/30 scale-110' : 'border-white/20 hover:border-white/60'}`}
               title="Read Date and Weather Aloud"
@@ -237,7 +237,7 @@ const App: React.FC = () => {
         <div className="w-full max-w-[120rem] mx-auto space-y-4 shrink-0 mt-8 pb-8">
           {insight && (
             <>
-              <div 
+              <div
                 onClick={() => toggleExpand('cultural')}
                 className="glass rounded-full px-10 py-6 hover:bg-white/20 transition-all duration-300 cursor-pointer overflow-hidden group border border-white/10 hover:border-purple-500/50 animate-slide-up stagger-3"
               >
@@ -250,29 +250,6 @@ const App: React.FC = () => {
                       <span className="text-xs font-black tracking-[0.3em] uppercase opacity-40 block">Cultural Recall</span>
                       <h2 className="text-3xl font-bold font-serif text-white flex items-center gap-4 truncate">
                         {insight.event} <span className="text-lg opacity-30 font-sans font-normal hidden sm:inline">— {insight.location}</span>
-                      </h2>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-white/30 group-hover:text-white/60 transition-colors">
-                    <span className="text-xs font-bold uppercase mr-2 opacity-40">{insight.engine === 'openrouter' ? 'Mimo' : 'Gemini'}</span>
-                    <i className="fas fa-expand"></i>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                onClick={() => toggleExpand('weather')}
-                className="glass rounded-full px-10 py-6 hover:bg-white/20 transition-all duration-300 cursor-pointer overflow-hidden group border border-white/10 hover:border-cyan-500/50 animate-slide-up stagger-4"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-8">
-                    <div className={`text-3xl ${getWeatherEventIcon(insight.historicalWeather?.type || 'other').split(' ')[1]}`}>
-                      <i className={`fas ${getWeatherEventIcon(insight.historicalWeather?.type || 'other').split(' ')[0]}`}></i>
-                    </div>
-                    <div>
-                      <span className="text-xs font-black tracking-[0.3em] uppercase opacity-40 block">Weather Recall</span>
-                      <h2 className="text-3xl font-bold font-serif text-white flex items-center gap-4 truncate">
-                        {insight.historicalWeather?.name} <span className="text-lg opacity-30 font-sans font-normal hidden sm:inline">— Year {insight.historicalWeather?.year}</span>
                       </h2>
                     </div>
                   </div>
