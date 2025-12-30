@@ -17,8 +17,8 @@ export async function getCulturalInsight(
     2. English-speaking countries (USA, UK, Canada, Australia, New Zealand, Ireland, etc.).
     
     Tasks:
-    1. Find a NOTABLE CULTURAL MILESTONE, holiday, or anniversary (e.g., a famous artist's birth, a historical event, a landmark pop culture moment) that falls on this day in Brazil or an English-speaking country.
-    2. Find a SIGNIFICANT HISTORICAL WEATHER EVENT (e.g., historic storms, extreme heatwaves, famous blizzards, floods) that occurred on this specific calendar day in history within these same regions.
+    1. Find a NOTABLE CULTURAL MILESTONE, holiday, or anniversary (e.g., a famous artist's birth, a historical event, a landmark pop culture moment) that falls on this day in Brazil or an English-speaking country. Respond in English ONLY.
+    2. Find a SIGNIFICANT HISTORICAL WEATHER EVENT (e.g., historic storms, extreme heatwaves, famous blizzards, floods) that occurred on this specific calendar day in history within these same regions. Respond in English ONLY.
     
     Return a JSON object with this EXACT structure:
     {
@@ -49,7 +49,7 @@ export async function getCulturalInsight(
         messages: [
           {
             role: "system",
-            content: "You are a specialized cultural and meteorological historian assistant. You must output valid JSON only."
+            content: "You are a specialized cultural and meteorological historian assistant. You must output valid JSON only. All descriptions and text fields MUST be in English."
           },
           {
             role: "user",
