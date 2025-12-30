@@ -5,8 +5,8 @@ import { CulturalInsight } from "../types";
 const OPENROUTER_API_KEY = "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";
 
 export async function getCulturalInsight(
-  dateStr: string, 
-  weather: string, 
+  dateStr: string,
+  weather: string,
   engine: 'gemini' | 'openrouter' = 'gemini'
 ): Promise<CulturalInsight> {
   const prompt = `
@@ -37,36 +37,38 @@ export async function getCulturalInsight(
 
   if (engine === 'openrouter') {
     try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": window.location.origin,
-          "X-Title": "Luso-Vibe Board"
-        },
-        body: JSON.stringify({
-          model: "xiaomi/mimo-v2-flash:free",
-          messages: [
-            {
-              role: "system",
-              content: "You are a specialized cultural and meteorological historian assistant. You must output valid JSON only."
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          response_format: { type: "json_object" }
-        })
+      // Dynamic import to avoid issues if the package isn't present in all environments immediately
+      const { OpenRouter } = await import("@openrouter/sdk");
+
+      const openrouter = new OpenRouter({
+        apiKey: OPENROUTER_API_KEY
       });
 
-      const data = await response.json();
-      const content = data.choices[0]?.message?.content;
+      const result = await openrouter.chat.send({
+        model: "xiaomi/mimo-v2-flash:free",
+        messages: [
+          {
+            role: "system",
+            content: "You are a specialized cultural and meteorological historian assistant. You must output valid JSON only."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        // @ts-ignore
+        response_format: { type: "json_object" }
+      });
+
+      // The SDK return type is likely an object with choices.
+      // @ts-ignore
+      const content = result.choices[0]?.message?.content || result.message?.content || "";
       const parsed = JSON.parse(content);
       return { ...parsed, engine: 'openrouter' };
+
     } catch (error) {
-      console.error("OpenRouter Error:", error);
+      console.error("OpenRouter SDK Error:", error);
+      // Fallback to manual fetch if SDK fails or wasn't what we expected, or just Gemini
       return getCulturalInsight(dateStr, weather, 'gemini');
     }
   }
@@ -92,8 +94,8 @@ export async function getCulturalInsight(
                 name: { type: Type.STRING },
                 year: { type: Type.INTEGER },
                 description: { type: Type.STRING },
-                type: { 
-                  type: Type.STRING, 
+                type: {
+                  type: Type.STRING,
                   enum: ['extreme_heat', 'extreme_cold', 'storm', 'flood', 'other']
                 }
               },
