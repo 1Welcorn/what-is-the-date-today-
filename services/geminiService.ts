@@ -2,6 +2,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { CulturalInsight } from "../types";
 
+// Replace this with your valid OpenRouter API Key
 const OPENROUTER_API_KEY = "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";
 
 export async function getCulturalInsight(
@@ -37,7 +38,6 @@ export async function getCulturalInsight(
 
   if (engine === 'openrouter') {
     try {
-      // Dynamic import to avoid issues if the package isn't present in all environments immediately
       const { OpenRouter } = await import("@openrouter/sdk");
 
       const openrouter = new OpenRouter({
@@ -60,7 +60,6 @@ export async function getCulturalInsight(
         response_format: { type: "json_object" }
       });
 
-      // The SDK return type is likely an object with choices.
       // @ts-ignore
       const content = result.choices[0]?.message?.content || result.message?.content || "";
       const parsed = JSON.parse(content);
@@ -68,12 +67,13 @@ export async function getCulturalInsight(
 
     } catch (error) {
       console.error("OpenRouter SDK Error:", error);
-      // Fallback to manual fetch if SDK fails or wasn't what we expected, or just Gemini
       return getCulturalInsight(dateStr, weather, 'gemini');
     }
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Use import.meta.env for Vite environment variables
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
+  const ai = new GoogleGenAI({ apiKey });
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
