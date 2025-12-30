@@ -1,10 +1,7 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-<<<<<<< HEAD
 import './index.css';
-=======
->>>>>>> 12a9fb5ff6258a51d4765b6255b62781c4e3c5b8
 import App from './App';
 
 const rootElement = document.getElementById('root');
