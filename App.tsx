@@ -128,18 +128,7 @@ const App: React.FC = () => {
     );
   }
 
-  if (loading && !weather) {
-    return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-950 text-white p-4">
-        <div className="animate-spin text-8xl mb-12 text-indigo-500">
-          <i className="fas fa-circle-notch"></i>
-        </div>
-        <p className="text-3xl font-light tracking-[0.5em] uppercase animate-pulse">
-          {aiEngine === 'openrouter' ? 'Calling Mimo...' : 'Initializing Board...'}
-        </p>
-      </div>
-    );
-  }
+
 
   return (
     <div className="h-screen w-screen relative overflow-hidden flex flex-col">
