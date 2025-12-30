@@ -3,10 +3,10 @@ import { WeatherData } from '../types';
 
 export async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`;
-  
+
   const response = await fetch(url);
   const data = await response.json();
-  
+
   if (!data.current_weather) {
     throw new Error('Weather data not available');
   }
@@ -35,7 +35,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
 
 export async function reverseGeocode(lat: number, lon: number): Promise<string> {
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=en`);
     const data = await res.json();
     return data.address.city || data.address.town || data.address.village || data.address.state || 'Unknown Location';
   } catch {

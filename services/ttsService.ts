@@ -42,7 +42,7 @@ export async function speakText(text: string): Promise<void> {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash-exp",
-      contents: [{ parts: [{ text: `Say clearly and naturally: ${text}` }] }],
+      contents: [{ parts: [{ text: `Read this text aloud in English, clearly and naturally: ${text}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
