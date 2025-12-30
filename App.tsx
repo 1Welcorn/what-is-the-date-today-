@@ -18,25 +18,42 @@ const App: React.FC = () => {
   const initializeApp = useCallback(async () => {
     setLoading(true);
     setError(null);
+    
+    let lat = -15.7975; // Default: Brasília
+    let lon = -47.8919;
+    let usingDefault = false;
+
     try {
+      // 1. Try Geolocation with a strict timeout
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+        if (!navigator.geolocation) reject(new Error("Geolocation not supported"));
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000 });
+      }).catch(err => {
+        console.warn("Geolocation failed, using default location.", err);
+        usingDefault = true;
+        return null;
       });
 
-      const { latitude, longitude } = position.coords;
-      const weatherData = await fetchWeather(latitude, longitude);
-      const locName = await reverseGeocode(latitude, longitude);
+      if (position) {
+        lat = position.coords.latitude;
+        lon = position.coords.longitude;
+      }
+
+      // 2. Fetch Weather
+      const weatherData = await fetchWeather(lat, lon);
+      const locName = usingDefault ? "Brasília, BR" : await reverseGeocode(lat, lon);
       const updatedWeather = { ...weatherData, locationName: locName };
       setWeather(updatedWeather);
 
+      // 3. Fetch Cultural Insights
       const today = new Date();
       const dateStr = today.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
       const insightData = await getCulturalInsight(dateStr, weatherData.conditionText);
       setInsight(insightData);
 
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Failed to initialize app. Please check location permissions.');
+      console.error("Initialization Error:", err);
+      setError(err.message || "An unexpected error occurred. Please check your internet connection.");
     } finally {
       setLoading(false);
     }
@@ -65,7 +82,6 @@ const App: React.FC = () => {
     });
     
     let speechText = `Today is ${fullDateStr}. The current time is ${timeStr}.`;
-    
     if (weather) {
       speechText += ` In ${weather.locationName}, the weather is currently ${weather.conditionText} with a temperature of ${Math.round(weather.temperature)} degrees Celsius.`;
     }
@@ -92,6 +108,24 @@ const App: React.FC = () => {
     setExpandedId(expandedId === id ? null : id);
   };
 
+  // Error State Rendering
+  if (error) {
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-red-950 text-white p-12 text-center">
+        <i className="fas fa-triangle-exclamation text-8xl mb-8 text-red-500"></i>
+        <h1 className="text-4xl font-bold mb-4">Board Error</h1>
+        <p className="text-xl opacity-80 max-w-2xl">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-12 px-8 py-4 glass rounded-full hover:bg-white/20 transition-all uppercase tracking-widest font-bold"
+        >
+          Try Reloading
+        </button>
+      </div>
+    );
+  }
+
+  // Loading State Rendering
   if (loading && !weather) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-950 text-white p-4">
@@ -105,7 +139,6 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen w-screen relative overflow-hidden flex flex-col">
-      {/* Background with zoom effect */}
       <div 
         className="absolute inset-0 transition-all duration-1000 animate-bg-zoom"
         style={finalBgStyle}
@@ -118,7 +151,7 @@ const App: React.FC = () => {
         ></div>
       )}
 
-      {/* Full Screen Overlay for Recall (Cultural or Weather) */}
+      {/* Full Screen Overlay for Recall */}
       {expandedId && insight && (
         <div 
           className="fixed inset-0 z-[100] glass backdrop-blur-[40px] flex flex-col p-16 lg:p-24 fade-in cursor-pointer overflow-y-auto"
@@ -161,14 +194,11 @@ const App: React.FC = () => {
       <div className="absolute inset-8 border border-white/5 pointer-events-none rounded-[3rem] fade-in"></div>
 
       <main className="relative z-10 flex-1 flex flex-col p-12 lg:p-16 h-full overflow-hidden">
-        
-        {/* Header Section */}
         <div className="w-full flex justify-between items-start shrink-0">
           <div className="animate-slide-down stagger-1">
             {weather && <WeatherCard weather={weather} />}
           </div>
           
-          {/* TTS Button */}
           <button 
             onClick={handleSpeakDate}
             className={`glass h-24 w-24 rounded-full flex items-center justify-center transition-all duration-300 border-2 animate-slide-down stagger-1 ${isSpeaking ? 'border-indigo-500 bg-indigo-500/30 scale-110' : 'border-white/20 hover:border-white/60'}`}
@@ -178,16 +208,13 @@ const App: React.FC = () => {
           </button>
         </div>
 
-        {/* Hero Section: The Date - Scaled to fill remaining space */}
         <div className="flex-1 flex items-center justify-center animate-reveal-hero stagger-2">
           <Clock />
         </div>
 
-        {/* Bottom Section: Recall Lines */}
         <div className="w-full max-w-[120rem] mx-auto space-y-4 shrink-0 mt-8 pb-8">
           {insight && (
             <>
-              {/* Cultural Recall Line */}
               <div 
                 onClick={() => toggleExpand('cultural')}
                 className="glass rounded-full px-10 py-6 hover:bg-white/20 transition-all duration-300 cursor-pointer overflow-hidden group border border-white/10 hover:border-purple-500/50 animate-slide-up stagger-3"
@@ -199,19 +226,18 @@ const App: React.FC = () => {
                     </div>
                     <div>
                       <span className="text-xs font-black tracking-[0.3em] uppercase opacity-40 block">Cultural Recall</span>
-                      <h2 className="text-3xl font-bold font-serif text-white flex items-center gap-4">
-                        {insight.event} <span className="text-lg opacity-30 font-sans font-normal">— {insight.location}</span>
+                      <h2 className="text-3xl font-bold font-serif text-white flex items-center gap-4 truncate">
+                        {insight.event} <span className="text-lg opacity-30 font-sans font-normal hidden sm:inline">— {insight.location}</span>
                       </h2>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-white/30 group-hover:text-white/60 transition-colors">
-                    <span className="text-sm font-bold tracking-widest uppercase">Tap to read</span>
+                    <span className="text-sm font-bold tracking-widest uppercase hidden md:inline">Tap to read</span>
                     <i className="fas fa-expand"></i>
                   </div>
                 </div>
               </div>
 
-              {/* Weather Recall Line */}
               <div 
                 onClick={() => toggleExpand('weather')}
                 className="glass rounded-full px-10 py-6 hover:bg-white/20 transition-all duration-300 cursor-pointer overflow-hidden group border border-white/10 hover:border-cyan-500/50 animate-slide-up stagger-4"
@@ -223,13 +249,13 @@ const App: React.FC = () => {
                     </div>
                     <div>
                       <span className="text-xs font-black tracking-[0.3em] uppercase opacity-40 block">Weather Recall</span>
-                      <h2 className="text-3xl font-bold font-serif text-white flex items-center gap-4">
-                        {insight.historicalWeather?.name} <span className="text-lg opacity-30 font-sans font-normal">— Year {insight.historicalWeather?.year}</span>
+                      <h2 className="text-3xl font-bold font-serif text-white flex items-center gap-4 truncate">
+                        {insight.historicalWeather?.name} <span className="text-lg opacity-30 font-sans font-normal hidden sm:inline">— Year {insight.historicalWeather?.year}</span>
                       </h2>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-white/30 group-hover:text-white/60 transition-colors">
-                    <span className="text-sm font-bold tracking-widest uppercase">Tap to read</span>
+                    <span className="text-sm font-bold tracking-widest uppercase hidden md:inline">Tap to read</span>
                     <i className="fas fa-expand"></i>
                   </div>
                 </div>
@@ -239,7 +265,6 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Subtle border to frame the screen edge */}
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10 fade-in"></div>
     </div>
   );
