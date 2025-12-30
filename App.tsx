@@ -14,8 +14,9 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [aiEngine, setAiEngine] = useState<'gemini' | 'openrouter'>('openrouter');
 
-  const initializeApp = useCallback(async () => {
+  const initializeApp = useCallback(async (engine: 'gemini' | 'openrouter' = aiEngine) => {
     setLoading(true);
     setError(null);
     
@@ -24,7 +25,6 @@ const App: React.FC = () => {
     let usingDefault = false;
 
     try {
-      // 1. Try Geolocation with a strict timeout
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         if (!navigator.geolocation) reject(new Error("Geolocation not supported"));
         navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000 });
@@ -39,16 +39,14 @@ const App: React.FC = () => {
         lon = position.coords.longitude;
       }
 
-      // 2. Fetch Weather
       const weatherData = await fetchWeather(lat, lon);
       const locName = usingDefault ? "Brasília, BR" : await reverseGeocode(lat, lon);
       const updatedWeather = { ...weatherData, locationName: locName };
       setWeather(updatedWeather);
 
-      // 3. Fetch Cultural Insights
       const today = new Date();
       const dateStr = today.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
-      const insightData = await getCulturalInsight(dateStr, weatherData.conditionText);
+      const insightData = await getCulturalInsight(dateStr, weatherData.conditionText, engine);
       setInsight(insightData);
 
     } catch (err: any) {
@@ -57,13 +55,19 @@ const App: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [aiEngine]);
 
   useEffect(() => {
     initializeApp();
-    const interval = setInterval(initializeApp, 3600000);
+    const interval = setInterval(() => initializeApp(), 3600000);
     return () => clearInterval(interval);
   }, [initializeApp]);
+
+  const handleEngineToggle = () => {
+    const next = aiEngine === 'gemini' ? 'openrouter' : 'gemini';
+    setAiEngine(next);
+    initializeApp(next);
+  };
 
   const handleSpeakDate = async () => {
     if (isSpeaking) return;
@@ -108,7 +112,6 @@ const App: React.FC = () => {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  // Error State Rendering
   if (error) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-red-950 text-white p-12 text-center">
@@ -125,14 +128,15 @@ const App: React.FC = () => {
     );
   }
 
-  // Loading State Rendering
   if (loading && !weather) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-950 text-white p-4">
         <div className="animate-spin text-8xl mb-12 text-indigo-500">
           <i className="fas fa-circle-notch"></i>
         </div>
-        <p className="text-3xl font-light tracking-[0.5em] uppercase animate-pulse">Initializing Board...</p>
+        <p className="text-3xl font-light tracking-[0.5em] uppercase animate-pulse">
+          {aiEngine === 'openrouter' ? 'Calling Mimo...' : 'Initializing Board...'}
+        </p>
       </div>
     );
   }
@@ -151,7 +155,6 @@ const App: React.FC = () => {
         ></div>
       )}
 
-      {/* Full Screen Overlay for Recall */}
       {expandedId && insight && (
         <div 
           className="fixed inset-0 z-[100] glass backdrop-blur-[40px] flex flex-col p-16 lg:p-24 fade-in cursor-pointer overflow-y-auto"
@@ -163,9 +166,15 @@ const App: React.FC = () => {
                 <i className={`fas ${expandedId === 'cultural' ? 'fa-landmark' : getWeatherEventIcon(insight.historicalWeather?.type || 'other').split(' ')[0]}`}></i>
               </div>
               <div>
-                <span className="text-xl lg:text-2xl font-black tracking-[0.5em] uppercase opacity-60 block mb-2">
-                  {expandedId === 'cultural' ? 'Cultural Recall' : 'Weather Recall'}
-                </span>
+                <div className="flex items-center gap-4 mb-2">
+                  <span className="text-xl lg:text-2xl font-black tracking-[0.5em] uppercase opacity-60">
+                    {expandedId === 'cultural' ? 'Cultural Recall' : 'Weather Recall'}
+                  </span>
+                  {/* DATA SOURCE BADGE */}
+                  <span className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-widest ${insight.engine === 'openrouter' ? 'bg-orange-500/40 text-orange-200' : 'bg-blue-500/40 text-blue-200'}`}>
+                    Source: {insight.engine === 'openrouter' ? 'Mimo (OpenRouter)' : 'Gemini'}
+                  </span>
+                </div>
                 <span className="text-3xl lg:text-4xl opacity-40 font-sans">
                   {expandedId === 'cultural' ? insight.location : `Year ${insight.historicalWeather?.year}`}
                 </span>
@@ -190,7 +199,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* TV Guides */}
       <div className="absolute inset-8 border border-white/5 pointer-events-none rounded-[3rem] fade-in"></div>
 
       <main className="relative z-10 flex-1 flex flex-col p-12 lg:p-16 h-full overflow-hidden">
@@ -199,13 +207,27 @@ const App: React.FC = () => {
             {weather && <WeatherCard weather={weather} />}
           </div>
           
-          <button 
-            onClick={handleSpeakDate}
-            className={`glass h-24 w-24 rounded-full flex items-center justify-center transition-all duration-300 border-2 animate-slide-down stagger-1 ${isSpeaking ? 'border-indigo-500 bg-indigo-500/30 scale-110' : 'border-white/20 hover:border-white/60'}`}
-            title="Read Date and Weather Aloud"
-          >
-            <i className={`fas ${isSpeaking ? 'fa-volume-high animate-pulse' : 'fa-volume-low'} text-4xl text-white`}></i>
-          </button>
+          <div className="flex gap-4 animate-slide-down stagger-1">
+            <button 
+              onClick={handleEngineToggle}
+              className={`glass px-6 h-24 rounded-full flex flex-col items-center justify-center transition-all duration-300 border-2 min-w-[140px] ${aiEngine === 'openrouter' ? 'border-orange-500/50 bg-orange-500/10' : 'border-white/20 hover:border-white/60'}`}
+              title="Switch AI Engine"
+            >
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1">AI Engine</span>
+              <span className="text-lg font-bold text-white flex items-center gap-2">
+                <i className={`fas ${aiEngine === 'gemini' ? 'fa-google text-blue-400' : 'fa-robot text-orange-400'}`}></i>
+                {aiEngine === 'gemini' ? 'Gemini' : 'Mimo'}
+              </span>
+            </button>
+
+            <button 
+              onClick={handleSpeakDate}
+              className={`glass h-24 w-24 rounded-full flex items-center justify-center transition-all duration-300 border-2 ${isSpeaking ? 'border-indigo-500 bg-indigo-500/30 scale-110' : 'border-white/20 hover:border-white/60'}`}
+              title="Read Date and Weather Aloud"
+            >
+              <i className={`fas ${isSpeaking ? 'fa-volume-high animate-pulse' : 'fa-volume-low'} text-4xl text-white`}></i>
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 flex items-center justify-center animate-reveal-hero stagger-2">
@@ -232,7 +254,7 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-white/30 group-hover:text-white/60 transition-colors">
-                    <span className="text-sm font-bold tracking-widest uppercase hidden md:inline">Tap to read</span>
+                    <span className="text-xs font-bold uppercase mr-2 opacity-40">{insight.engine === 'openrouter' ? 'Mimo' : 'Gemini'}</span>
                     <i className="fas fa-expand"></i>
                   </div>
                 </div>
@@ -255,7 +277,7 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-white/30 group-hover:text-white/60 transition-colors">
-                    <span className="text-sm font-bold tracking-widest uppercase hidden md:inline">Tap to read</span>
+                    <span className="text-xs font-bold uppercase mr-2 opacity-40">{insight.engine === 'openrouter' ? 'Mimo' : 'Gemini'}</span>
                     <i className="fas fa-expand"></i>
                   </div>
                 </div>

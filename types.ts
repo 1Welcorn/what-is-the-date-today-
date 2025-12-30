@@ -20,6 +20,7 @@ export interface CulturalInsight {
   description: string;
   themeColor: string;
   imageKeyword: string;
+  engine?: 'gemini' | 'openrouter';
   historicalWeather?: HistoricalWeatherEvent;
 }
 
