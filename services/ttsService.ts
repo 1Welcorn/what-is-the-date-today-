@@ -35,19 +35,21 @@ export async function speakText(text: string): Promise<void> {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
   const ai = new GoogleGenAI({ apiKey });
 
-  const voices = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Aoede'];
-  const randomVoice = voices[Math.floor(Math.random() * voices.length)];
-  console.log(`Speaking with voice: ${randomVoice}`);
+  // Use a softer, more natural voice. 'Aoede' is generally very smooth.
+  // 'Fenrir' is good for deep male voice.
+  const preferredVoice = 'Aoede';
+  console.log(`Attempting to speak with Gemini voice: ${preferredVoice}`);
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash-exp",
-      contents: [{ parts: [{ text: `Generate audio speaking this text. Use a clear, professional English accent (American or British). Do not switch languages. Text: ${text}` }] }],
+      // Adjusted prompt for a more natural, less robotic delivery
+      contents: [{ parts: [{ text: `Generate audio speaking this text. Use a warm, natural, and conversational English accent. Avoid being overly formal or robotic. Text: ${text}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: randomVoice },
+            prebuiltVoiceConfig: { voiceName: preferredVoice },
           },
         },
       },
@@ -69,15 +71,45 @@ export async function speakText(text: string): Promise<void> {
     source.connect(outputAudioContext.destination);
     source.start();
   } catch (error) {
-    console.error("TTS Error:", error);
-    // Fallback to browser's native TTS if Gemini fails
+    console.warn("Gemini TTS failed or API key missing, falling back to browser TTS.", error);
+
+    // Improved Fallback to browser's native TTS
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
-    const voices = window.speechSynthesis.getVoices();
-    const englishVoice = voices.find(v => v.lang.includes('en-US')) || voices.find(v => v.lang.includes('en'));
-    if (englishVoice) {
-      utterance.voice = englishVoice;
+
+    // Wait for voices to load if they haven't (Chrome issue)
+    let voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) {
+      await new Promise<void>(resolve => {
+        window.speechSynthesis.onvoiceschanged = () => {
+          voices = window.speechSynthesis.getVoices();
+          resolve();
+        };
+        // Timeout just in case
+        setTimeout(resolve, 1000);
+      });
     }
+
+    // Smart voice selection algorithm
+    // 1. Look for "Natural" voices (often provided by Edge/Windows online)
+    // 2. Look for "Google US English" (Chrome standard, decent)
+    // 3. Look for "Premium" voices
+    // 4. Fallback to any 'en-US'
+    const bestVoice =
+      voices.find(v => v.name.includes("Natural") && v.lang.includes("en")) ||
+      voices.find(v => v.name.includes("Google US English")) ||
+      voices.find(v => v.name.includes("Premium") && v.lang.includes("en")) ||
+      voices.find(v => v.lang.includes("en-US")) ||
+      voices.find(v => v.lang.includes("en"));
+
+    if (bestVoice) {
+      console.log(`Using fallback voice: ${bestVoice.name}`);
+      utterance.voice = bestVoice;
+      // Adjust settings for slightly more natural sound if possible
+      utterance.rate = 0.9; // Slightly slower can be clearer
+      utterance.pitch = 1.0;
+    }
+
     window.speechSynthesis.speak(utterance);
   }
 }
