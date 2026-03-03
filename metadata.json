@@ -1,0 +1,7 @@
+{
+  "name": "WEATHER",
+  "description": "A high-visibility dashboard for date, time, and weather, featuring dynamic atmospheric themes and interactive forecasts.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
