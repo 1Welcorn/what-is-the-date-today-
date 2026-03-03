@@ -1,36 +1,44 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { speakText, preloadText } from '../services/ttsService';
 
 interface ThermalIndicatorProps {
   temperature: number;
 }
 
+const levels = [
+  { label: 'Burning hot', color: 'bg-red-600', textColor: 'text-red-100', icon: 'fa-fire', feature: 'MELTING' },
+  { label: 'hot', color: 'bg-orange-500', textColor: 'text-orange-100', icon: 'fa-sun', feature: 'SWEATING' },
+  { label: 'warm', color: 'bg-yellow-400', textColor: 'text-yellow-900', icon: 'fa-face-smile-beam', feature: 'PERFECT' },
+  { label: 'cool', color: 'bg-cyan-400', textColor: 'text-cyan-900', icon: 'fa-face-smile', feature: 'REFRESHING' },
+  { label: 'cold', color: 'bg-blue-500', textColor: 'text-blue-100', icon: 'fa-face-grimace', feature: 'SHIVERING' },
+  { label: 'Freezing cold', color: 'bg-indigo-700', textColor: 'text-indigo-100', icon: 'fa-snowflake', feature: 'FROZEN' }
+].reverse();
+
 const ThermalIndicator: React.FC<ThermalIndicatorProps> = ({ temperature }) => {
   const tubeRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const lastSpokenIndex = useRef<number | null>(null);
 
   const getThermalData = (temp: number) => {
     if (temp >= 40) return { label: 'Burning hot', color: 'bg-red-600', textColor: 'text-red-100', index: 5 };
     if (temp >= 30) return { label: 'hot', color: 'bg-orange-500', textColor: 'text-orange-100', index: 4 };
     if (temp >= 20) return { label: 'warm', color: 'bg-yellow-400', textColor: 'text-yellow-900', index: 3 };
-    if (temp >= 10) return { label: 'cool', color: 'bg-green-500', textColor: 'text-green-100', index: 2 };
-    if (temp >= 0) return { label: 'cold', color: 'bg-blue-600', textColor: 'text-blue-100', index: 1 };
-    return { label: 'Freezing cold', color: 'bg-purple-700', textColor: 'text-purple-100', index: 0 };
+    if (temp >= 10) return { label: 'cool', color: 'bg-cyan-400', textColor: 'text-cyan-900', index: 2 };
+    if (temp >= 0) return { label: 'cold', color: 'bg-blue-500', textColor: 'text-blue-100', index: 1 };
+    return { label: 'Freezing cold', color: 'bg-indigo-700', textColor: 'text-indigo-100', index: 0 };
   };
-
-  const levels = [
-    { label: 'Burning hot', color: 'bg-red-600', textColor: 'text-red-100', icon: 'fa-fire', feature: 'MELTING' },
-    { label: 'hot', color: 'bg-orange-500', textColor: 'text-orange-100', icon: 'fa-sun', feature: 'SWEATING' },
-    { label: 'warm', color: 'bg-yellow-400', textColor: 'text-yellow-900', icon: 'fa-face-smile-beam', feature: 'PERFECT' },
-    { label: 'cool', color: 'bg-green-500', textColor: 'text-green-100', icon: 'fa-face-smile', feature: 'REFRESHING' },
-    { label: 'cold', color: 'bg-blue-600', textColor: 'text-blue-100', icon: 'fa-face-grimace', feature: 'SHIVERING' },
-    { label: 'Freezing cold', color: 'bg-purple-700', textColor: 'text-purple-100', icon: 'fa-snowflake', feature: 'FROZEN' }
-  ].reverse();
 
   const realCurrent = getThermalData(temperature);
   const displayIndex = draggedIndex !== null ? draggedIndex : realCurrent.index;
   const current = { ...levels[displayIndex], index: displayIndex };
+
+  const displayIndexRef = useRef(displayIndex);
+  useEffect(() => {
+    displayIndexRef.current = displayIndex;
+  }, [displayIndex]);
 
   const handleDrag = (clientY: number) => {
     if (!tubeRef.current) return;
@@ -46,9 +54,16 @@ const ThermalIndicator: React.FC<ThermalIndicatorProps> = ({ temperature }) => {
 
     const onMouseMove = (e: MouseEvent) => handleDrag(e.clientY);
     const onTouchMove = (e: TouchEvent) => handleDrag(e.touches[0].clientY);
-    const onEnd = () => {
+    const onEnd = async () => {
       setIsDragging(false);
-      // We keep the draggedIndex until the next prop update or user interaction
+      // Trigger speech when dragging ends
+      const finalIndex = displayIndexRef.current;
+      if (lastSpokenIndex.current !== finalIndex) {
+        setIsSpeaking(true);
+        await speakText(levels[finalIndex].label);
+        setIsSpeaking(false);
+        lastSpokenIndex.current = finalIndex;
+      }
     };
 
     window.addEventListener('mousemove', onMouseMove);
@@ -68,6 +83,13 @@ const ThermalIndicator: React.FC<ThermalIndicatorProps> = ({ temperature }) => {
   useEffect(() => {
     setDraggedIndex(null);
   }, [temperature]);
+
+  // Preload all audio on mount
+  useEffect(() => {
+    levels.forEach(level => {
+      preloadText(level.label);
+    });
+  }, []);
 
   return (
     <div className="flex flex-col items-center gap-2 animate-reveal-hero stagger-4 scale-75 lg:scale-100">
@@ -91,7 +113,7 @@ const ThermalIndicator: React.FC<ThermalIndicatorProps> = ({ temperature }) => {
               {levels.map((level, i) => (
                 <div 
                   key={`bar-${level.label}`}
-                  className={`flex-1 w-full transition-all duration-1000 
+                  className={`flex-1 w-full transition-all duration-1000 border-t border-black/5
                     ${i <= displayIndex ? level.color : 'bg-transparent'}
                     ${i === displayIndex ? 'animate-pulse' : ''}
                   `}
@@ -100,20 +122,26 @@ const ThermalIndicator: React.FC<ThermalIndicatorProps> = ({ temperature }) => {
             </div>
 
             {/* Labels and Active Marker (Not Clipped) */}
-            <div className="absolute inset-0 flex flex-col-reverse py-4">
+            <div className="absolute inset-0 flex flex-col-reverse">
               {levels.map((level, i) => (
                 <div 
                   key={`label-${level.label}`}
                   className="flex-1 w-full flex items-center justify-center relative px-2 cursor-pointer group/level"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
                     setDraggedIndex(i);
+                    if (lastSpokenIndex.current !== i) {
+                      setIsSpeaking(true);
+                      await speakText(levels[i].label);
+                      setIsSpeaking(false);
+                      lastSpokenIndex.current = i;
+                    }
                   }}
                 >
                   {/* Hover Highlight */}
                   <div className="absolute inset-x-4 inset-y-1 bg-white/0 group-hover/level:bg-white/10 rounded-lg transition-colors pointer-events-none" />
                   
-                  <span className={`text-[11px] lg:text-[12px] font-black uppercase tracking-tighter text-center transition-opacity duration-1000 z-10 ${i <= displayIndex ? 'opacity-100' : 'opacity-20'} ${i === 3 ? 'text-slate-900' : 'text-white'}`}>
+                  <span className={`text-[10px] lg:text-[11px] font-black uppercase tracking-tighter text-center transition-opacity duration-1000 z-10 whitespace-nowrap ${i <= displayIndex ? 'opacity-100' : 'opacity-20'} ${i === 3 ? 'text-slate-900' : 'text-white'}`}>
                     {level.label}
                   </span>
                   
@@ -137,11 +165,14 @@ const ThermalIndicator: React.FC<ThermalIndicatorProps> = ({ temperature }) => {
                       {/* Label Box */}
                       <div className="bg-dots p-0.5 rounded-sm shadow-2xl border-2 border-slate-800">
                         <div className="bg-white/95 px-2 py-0.5 border border-dashed border-slate-300 flex flex-col items-center">
-                          <span className="text-xl lg:text-2xl font-black text-slate-900 uppercase tracking-tight whitespace-nowrap">
+                          <span className={`text-xl lg:text-2xl font-black text-slate-900 uppercase tracking-tight whitespace-nowrap transition-all duration-300 ${isSpeaking ? 'scale-110 text-indigo-600' : 'scale-100'}`}>
                             {level.label}
                           </span>
                           {isDragging && (
                             <span className="text-[9px] font-bold text-indigo-500 uppercase mt-0.5 animate-pulse">Calibrating...</span>
+                          )}
+                          {isSpeaking && !isDragging && (
+                            <span className="text-[9px] font-bold text-indigo-500 uppercase mt-0.5 animate-bounce">Announcing...</span>
                           )}
                         </div>
                       </div>
@@ -153,7 +184,7 @@ const ThermalIndicator: React.FC<ThermalIndicatorProps> = ({ temperature }) => {
           </div>
         
         {/* Bulb */}
-        <div className={`w-32 h-32 rounded-full -mt-8 border-4 border-slate-800 shadow-2xl transition-colors duration-1000 flex flex-col items-center justify-center z-30 ${current.color}`}>
+        <div className={`w-32 h-32 rounded-full mt-2 border-4 border-slate-800 shadow-2xl transition-colors duration-1000 flex flex-col items-center justify-center z-30 ${current.color}`}>
            {draggedIndex !== null ? (
              <div className="flex flex-col items-center animate-pop-in">
                <i className={`fas ${current.icon} text-4xl ${current.textColor} mb-1`}></i>

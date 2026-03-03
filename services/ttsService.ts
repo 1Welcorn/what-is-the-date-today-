@@ -30,18 +30,71 @@ async function decodeAudioData(
   return buffer;
 }
 
-export async function speakText(text: string): Promise<void> {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const audioCache = new Map<string, AudioBuffer>();
+
+export async function preloadText(text: string): Promise<void> {
+  if (audioCache.has(text)) return;
   
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: `Say clearly and naturally: ${text}` }] }],
+      contents: [{ parts: [{ text: `Announce the current thermal state with professional weather report gravitas: "${text}"` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Kore' }, // Clear, professional voice
+            prebuiltVoiceConfig: { voiceName: 'Zephyr' },
+          },
+        },
+      },
+    });
+
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (!base64Audio) return;
+
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    const buffer = await decodeAudioData(
+      decodeBase64(base64Audio),
+      ctx,
+      24000,
+      1
+    );
+    audioCache.set(text, buffer);
+    await ctx.close();
+  } catch (error) {
+    console.error("Preload Error:", error);
+  }
+}
+
+export async function speakText(text: string): Promise<void> {
+  const cachedBuffer = audioCache.get(text);
+  const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+
+  if (cachedBuffer) {
+    return new Promise((resolve) => {
+      const source = outputAudioContext.createBufferSource();
+      source.buffer = cachedBuffer;
+      source.connect(outputAudioContext.destination);
+      source.onended = () => {
+        outputAudioContext.close();
+        resolve();
+      };
+      source.start();
+    });
+  }
+
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: `Announce the current thermal state with professional weather report gravitas: "${text}"` }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Zephyr' },
           },
         },
       },
@@ -50,7 +103,6 @@ export async function speakText(text: string): Promise<void> {
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     if (!base64Audio) throw new Error("No audio data received from Gemini");
 
-    const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
     const audioBuffer = await decodeAudioData(
       decodeBase64(base64Audio),
       outputAudioContext,
@@ -58,14 +110,27 @@ export async function speakText(text: string): Promise<void> {
       1
     );
 
-    const source = outputAudioContext.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(outputAudioContext.destination);
-    source.start();
+    // Cache it for next time
+    audioCache.set(text, audioBuffer);
+
+    return new Promise((resolve) => {
+      const source = outputAudioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(outputAudioContext.destination);
+      source.onended = () => {
+        outputAudioContext.close();
+        resolve();
+      };
+      source.start();
+    });
   } catch (error) {
     console.error("TTS Error:", error);
     // Fallback to browser's native TTS if Gemini fails
-    const utterance = new SpeechSynthesisUtterance(text);
-    window.speechSynthesis.speak(utterance);
+    return new Promise((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve();
+      window.speechSynthesis.speak(utterance);
+    });
   }
 }

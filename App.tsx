@@ -10,6 +10,12 @@ import ForecastOverlay from './components/ForecastOverlay.tsx';
 import NotebookGuide from './components/NotebookGuide.tsx';
 import ThermalIndicator from './components/ThermalIndicator.tsx';
 
+const WALLPAPERS = [
+  'https://i.ibb.co/c4RJyrx/dynamic-cityscape-at-night-1o782x3nkldsi7oy.webp',
+  'https://i.ibb.co/YTLVj1r1/among-us-sus-desktop-background-y4bioj7iu1job3kq.webp',
+  'https://i.ibb.co/39jFQ9tQ/Uzumaki-Naruto-In-Competition-With-Uchiha-Sasuke.webp'
+];
+
 const App: React.FC = () => {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -145,9 +151,7 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!weather) return;
-    const theme = getWeatherTheme(weather.conditionCode);
-    const url = `https://loremflickr.com/1920/1080/${theme}?lock=${weather.conditionCode}`;
+    const url = WALLPAPERS[Math.floor(Math.random() * WALLPAPERS.length)];
     
     const loadBg = async () => {
       try {
@@ -189,8 +193,8 @@ const App: React.FC = () => {
     return 'nature';
   };
 
-  const finalBgStyle = weather 
-    ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url('${bgImageUrl || `https://loremflickr.com/1920/1080/${getWeatherTheme(weather.conditionCode)}?lock=${weather.conditionCode}`}')`, backgroundSize: 'cover', backgroundPosition: 'center' }
+  const finalBgStyle = bgImageUrl 
+    ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url('${bgImageUrl}')`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : { background: 'linear-gradient(to bottom, #020617, #0f172a)' };
 
   const getIcon = (code: number) => {
